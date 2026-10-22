@@ -7,9 +7,15 @@
 
 #include "Devices/motor.h"
 #include "Devices/enkoder.h"
+#define AIN1_GPIO_PORT GPIOC
+#define AIN1_PIN GPIO_PIN_7
+#define AIN2_GPIO_PORT GPIOC
+#define AIN2_PIN GPIO_PIN_9
 
 void motor_init(void){
 	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+	HAL_GPIO_WritePin(AIN1_GPIO_PORT, AIN1_PIN, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(AIN2_GPIO_PORT, AIN2_PIN, GPIO_PIN_RESET);
 }
 
 void motor_set_speed(uint32_t speed){
@@ -23,23 +29,24 @@ uint32_t motor_read_speed(void){
 }
 
 void motor_test(void) {
-
     static uint32_t speed = 0;
+    static GPIO_PinState last_button_state = GPIO_PIN_SET;
 
-    if (motor_read_speed() == GPIO_PIN_SET) {
-        speed += 100;
 
+    GPIO_PinState current_button_state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
+
+    if (current_button_state == GPIO_PIN_RESET && last_button_state == GPIO_PIN_SET) {
+        speed += 200;
 
         if (speed > 1000) {
             speed = 0;
         }
 
         motor_set_speed(speed);
+
+
+        HAL_Delay(200);
     }
+
+    last_button_state = current_button_state;
 }
-
-//void motor_update(void){
-//	int32_t current_pulse=encoder_get_count();
-//	static uint32_t speed_counter = 0;
-//}
-
