@@ -27,6 +27,7 @@
 #include "Devices/testdiode.h"
 #include "Devices/motor.h"
 #include "Devices/enkoder.h"
+#include "Devices/esp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -75,7 +76,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -96,9 +97,11 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM8_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   encoder_init();
   motor_init();
+  ESP_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,11 +111,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  while (1) {
-	      // Rozjaśnianie
-		  motor_test();
-		  HAL_Delay(150);
-	  }
+	  motor_update_from_esp();
+
+	      HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
