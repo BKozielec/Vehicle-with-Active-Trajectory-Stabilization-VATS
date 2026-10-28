@@ -73,3 +73,11 @@ char ESP_GetDirection(void){
 int ESP_GetServoAngle(void){
 	return parsed_servo_angle;
 }
+
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART2) {
+
+        ESP_UART_RxCallback(single_rx_byte);
+    }
+}
