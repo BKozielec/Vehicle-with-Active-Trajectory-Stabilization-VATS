@@ -28,6 +28,7 @@
 #include "Devices/motor.h"
 #include "Devices/enkoder.h"
 #include "Devices/esp.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -99,13 +100,14 @@ int main(void)
   MX_TIM8_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  encoder_init();
+  ;
+  ESP_Init()encoder_init();
   motor_init();
-  ESP_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t last_uart_time = 0;
   while (1)
   {
     /* USER CODE END WHILE */
@@ -113,7 +115,15 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  motor_update_from_esp();
 
-	      HAL_Delay(10);
+
+	  if (HAL_GetTick() - last_uart_time >= 4000) {
+	            last_uart_time = HAL_GetTick();
+
+
+	            esp_send_encoder_rpm(encoder_get_rpm(2000, 4000));
+	        }
+
+
   }
   /* USER CODE END 3 */
 }
@@ -168,6 +178,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 
 /* USER CODE END 4 */
 

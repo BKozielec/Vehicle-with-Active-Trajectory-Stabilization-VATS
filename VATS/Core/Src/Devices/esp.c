@@ -9,11 +9,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "main.h"
 
 
 #define RX_BUFFER_SIZE 64
-
+extern UART_HandleTypeDef huart2;
 
 static char rx_line_buffer[RX_BUFFER_SIZE];
 static uint8_t buffer_index = 0;
@@ -72,6 +73,21 @@ char ESP_GetDirection(void){
 }
 int ESP_GetServoAngle(void){
 	return parsed_servo_angle;
+}
+int _write(int file, char *ptr, int len) {
+    HAL_UART_Transmit(&huart2, (uint8_t *)ptr, (uint16_t)len, HAL_MAX_DELAY);
+    return len;
+}
+void esp_send_encoder_rpm(float rpm) {
+
+    int32_t rpm_int = (int32_t)rpm;
+    int32_t rpm_dec = (int32_t)((rpm - rpm_int) * 10);
+    if (rpm_dec < 0) rpm_dec = -rpm_dec;
+
+    char buffer[64];
+    int len = sprintf(buffer, "Predkosc: %ld.%ld RPM\r\n", rpm_int, rpm_dec);
+
+    HAL_UART_Transmit(&huart2, (uint8_t*)buffer, (uint16_t)len, HAL_MAX_DELAY);
 }
 
 
