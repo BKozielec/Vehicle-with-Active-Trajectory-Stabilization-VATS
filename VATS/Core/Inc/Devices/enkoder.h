@@ -16,6 +16,7 @@ int32_t encoder_get_count(void);
 
 void encoder_reset(void);
 
-float encoder_get_rpm(uint32_t cpr, uint32_t interval_ms);
+
+float encoder_get_rpm_real(uint32_t cpr);
 
 #endif /* INC_DEVICES_ENKODER_H_ */

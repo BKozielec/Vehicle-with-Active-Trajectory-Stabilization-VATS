@@ -29,6 +29,7 @@
 #include "Devices/enkoder.h"
 #include "Devices/esp.h"
 #include <stdio.h>
+#include "pid.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -101,30 +102,36 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   ;
-  ESP_Init()encoder_init();
+  ESP_Init();
+  encoder_init();
   motor_init();
+  PID_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   uint32_t last_uart_time = 0;
+  uint32_t last_pid_time = 0;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  motor_update_from_esp();
+
+	      if (HAL_GetTick() - last_pid_time >= 20) {
+	          last_pid_time = HAL_GetTick();
+	          motor_update_from_esp();
+	      }
 
 
-	  if (HAL_GetTick() - last_uart_time >= 4000) {
-	            last_uart_time = HAL_GetTick();
+	      if (HAL_GetTick() - last_uart_time >= 4000) {
+	          last_uart_time = HAL_GetTick();
 
 
-	            esp_send_encoder_rpm(encoder_get_rpm(2000, 4000));
-	        }
-
-
-  }
+	          float current_rpm = encoder_get_rpm_real(2000);
+	          esp_send_encoder_rpm(current_rpm);
+	      }
+	  }
   /* USER CODE END 3 */
 }
 
