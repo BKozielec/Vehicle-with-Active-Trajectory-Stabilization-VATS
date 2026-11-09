@@ -6,6 +6,8 @@
  */
 #include "main.h"
 #include "tim.h"
+#include "pid.h"
+
 
 #ifndef DEVICES_MOTOR_H_
 #define DEVICES_MOTOR_H_

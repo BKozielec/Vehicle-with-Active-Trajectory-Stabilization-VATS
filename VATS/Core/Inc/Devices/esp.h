@@ -14,6 +14,6 @@ int ESP_GetSpeed(void);
 char ESP_GetDirection(void);
 int ESP_GetServoAngle(void);
 void ESP_Init(void);
-
-
+int _write(int file, char *ptr, int len);
+void esp_send_encoder_rpm(float rpm);
 #endif /* INC_DEVICES_ESP_H_ */
