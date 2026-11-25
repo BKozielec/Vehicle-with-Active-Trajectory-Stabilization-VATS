@@ -4,11 +4,8 @@
 
 #define LED_PIN 2
 
-//const char* AP_SSID = "VATS_Vehicle_AP";
-//const char* AP_PASS = "12345678";
-
-const char* WIFI_SSID = "NETAMO.PL_2451";
-const char* WIFI_PASS = "12771714";
+const char* AP_SSID = "VATS_Vehicle_AP";
+const char* AP_PASS = "12345678";
 
 const uint16_t UDP_RX_PORT = 5006;
 const uint16_t UDP_TX_PORT = 5005;
