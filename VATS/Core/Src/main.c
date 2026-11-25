@@ -24,12 +24,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "Devices/testdiode.h"
+#include "vats_config.h"
 #include "Devices/motor.h"
 #include "Devices/enkoder.h"
+#include "Devices/servo.h"
 #include "Devices/esp.h"
-#include <stdio.h>
-#include "pid.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+static const char *reset_cause = "?";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,7 +80,15 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  /* Przyczyna resetu (kolejność: najbardziej znacząca pierwsza). BOR = spadek
+   * zasilania; przy zwykłym włączeniu zasilania ustawione są BOR i PIN. */
+  if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST) != 0U)      reset_cause = "IWDG";
+  else if (__HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST) != 0U) reset_cause = "WWDG";
+  else if (__HAL_RCC_GET_FLAG(RCC_FLAG_LPWRRST) != 0U) reset_cause = "LPWR";
+  else if (__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST) != 0U)  reset_cause = "SFT";
+  else if (__HAL_RCC_GET_FLAG(RCC_FLAG_BORRST) != 0U)  reset_cause = "BOR";
+  else if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST) != 0U)  reset_cause = "PIN";
+  __HAL_RCC_CLEAR_RESET_FLAGS();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -101,37 +108,82 @@ int main(void)
   MX_TIM8_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  ;
-  ESP_Init();
-  encoder_init();
-  motor_init();
-  PID_Init();
+  /* Najpierw silniki w stan bezpieczny, potem reszta. */
+  if (motor_init() != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (encoder_init() != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (servo_init() != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (ESP_Init() != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint32_t last_uart_time = 0;
-  uint32_t last_pid_time = 0;
+  uint32_t last_control_tick = HAL_GetTick();
+  uint32_t last_telemetry_tick = last_control_tick;
+  uint32_t last_cmd_seq = 0U;
+  EspCommand cmd;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    ESP_Poll();
 
-	      if (HAL_GetTick() - last_pid_time >= 20) {
-	          last_pid_time = HAL_GetTick();
-	          motor_update_from_esp();
-	      }
+    uint32_t now = HAL_GetTick();
+    uint32_t elapsed = now - last_control_tick;
+    if (elapsed >= CONTROL_PERIOD_MS)
+    {
+      last_control_tick = now;
 
+      ESP_GetCommand(&cmd);
+      if (cmd.seq != last_cmd_seq)
+      {
+        last_cmd_seq = cmd.seq;
+        if (cmd.open_loop)
+        {
+          motor_set_open_loop(cmd.dir, cmd.open_loop_duty);
+        }
+        else
+        {
+          motor_set_target(cmd.dir, cmd.speed_rpm);
+        }
+        /* Błąd możliwy tylko przy niezainicjalizowanym serwie (wtedy Error_Handler wyżej). */
+        (void)servo_set_angle(cmd.servo_angle);
+      }
 
-	      if (HAL_GetTick() - last_uart_time >= 4000) {
-	          last_uart_time = HAL_GetTick();
+      encoder_update(elapsed);
+      motor_control_update(elapsed);
+    }
 
-
-	          float current_rpm = encoder_get_rpm_real(2000);
-	          esp_send_encoder_rpm(current_rpm);
-	      }
-	  }
+    if ((now - last_telemetry_tick) >= TELEMETRY_PERIOD_MS)
+    {
+      last_telemetry_tick = now;
+      EspTelemetry t = {
+        .rpm_l = encoder_get_rpm(WHEEL_LEFT),
+        .rpm_r = encoder_get_rpm(WHEEL_RIGHT),
+        .duty_l = motor_get_duty(WHEEL_LEFT),
+        .duty_r = motor_get_duty(WHEEL_RIGHT),
+        .enc_l = encoder_get_position(WHEEL_LEFT),
+        .enc_r = encoder_get_position(WHEEL_RIGHT),
+        .servo_angle = servo_get_angle(),
+        .uptime_ms = now,
+        .reset_cause = reset_cause,
+      };
+      /* HAL_BUSY = poprzednia ramka jeszcze leci; pomijamy tę próbkę. */
+      (void)ESP_SendTelemetry(&t);
+    }
+  }
   /* USER CODE END 3 */
 }
 
@@ -197,6 +249,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  motor_emergency_stop();
   __disable_irq();
   while (1)
   {

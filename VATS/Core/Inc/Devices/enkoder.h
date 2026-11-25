@@ -3,20 +3,25 @@
  *
  *  Created on: Oct 19, 2026
  *      Author: bartol
+ *
+ * Dwa enkodery kwadraturowe: lewy TIM3 (PA6/PA7), prawy TIM8 (PB10/PB13).
  */
-#include "main.h"
-#include "tim.h"
-#include <stdio.h>
+
 #ifndef INC_DEVICES_ENKODER_H_
 #define INC_DEVICES_ENKODER_H_
 
-void encoder_init(void);
+#include "main.h"
+#include "vats_config.h"
 
-int32_t encoder_get_count(void);
+HAL_StatusTypeDef encoder_init(void);
 
-void encoder_reset(void);
+/* Wywoływać raz na okres regulacji; dt_ms = czas od poprzedniego wywołania. */
+void    encoder_update(uint32_t dt_ms);
 
+/* Prędkość koła ze znakiem [RPM], wartość z ostatniego encoder_update(). */
+float   encoder_get_rpm(Wheel wheel);
 
-float encoder_get_rpm_real(uint32_t cpr);
+/* Skumulowana pozycja w impulsach licznika (do pomiaru CPR). */
+int32_t encoder_get_position(Wheel wheel);
 
 #endif /* INC_DEVICES_ENKODER_H_ */
